@@ -4,31 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import java.util.Properties
-
 val neGradleConfig = NEGradleConfig(project.extra)
-val localProperties =
-    File(rootDir, "local.properties").let { file ->
-        Properties().apply {
-            if (file.exists()) {
-                load(file.inputStream())
-            }
-        }
-    }
+val localProperties = fetchLocalProperties(rootDir)
 
 plugins {
-    id(UtilityPlugins.androidLibraryPlugin)
-    id(UtilityPlugins.mavenPublish)
-    id(UtilityPlugins.kotlinxSerialization)
-    id(UtilityPlugins.kotlinParcelize)
-    id("jacoco")
-    id("com.ncorti.ktfmt.gradle") version "0.22.0"
-    id("org.jetbrains.dokka") version "1.9.10"
+    id(Deps.Plugins.ANDROID_LIBRARY)
+    id(Deps.Plugins.MAVEN_PUBLISH)
+    id(Deps.Plugins.KOTLINX_SERIALIZATION)
+    id(Deps.Plugins.KOTLIN_PARCELIZE)
+    id(Deps.Plugins.JACOCO)
+    id(Deps.Plugins.KTFMT) version Versions.KTFMT
+    id(Deps.Plugins.DOKKA) version Versions.DOKKA
 }
 
-jacoco { toolVersion = "0.8.8" }
+jacoco { toolVersion = Versions.JACOCO }
 
-apply(plugin = "kotlin-android")
+apply(plugin = Deps.Plugins.KOTLIN_ANDROID)
 
 android {
     namespace = "dev.deliteai.nimblenet_ktx"
@@ -46,11 +37,10 @@ android {
                 "ANDROID_TEST_CLIENT_SECRET",
                 "ANDROID_TEST_HOST",
                 "REMOTE_LOGGER_KEY",
-                "REMOTE_LOGGER_URL"
+                "REMOTE_LOGGER_URL",
             ),
             project
         )
-
     }
 
     buildFeatures { buildConfig = true }
@@ -82,25 +72,7 @@ android {
 
     testOptions { unitTests.isReturnDefaultValues = true }
 
-    afterEvaluate {
-        publishing {
-            publications {
-                createMavenPublication("internalRelease", "nimblenet_ktx")
-                createMavenPublication("externalRelease", "nimblenet_ktx")
-            }
-
-            repositories {
-                maven {
-                    name = "deliteai_android"
-                    url = uri(neGradleConfig.awsS3Url)
-                    credentials(AwsCredentials::class) {
-                        accessKey = neGradleConfig.awsAccessKey
-                        secretKey = neGradleConfig.awsSecretKey
-                    }
-                }
-            }
-        }
-    }
+    Publishing(project, neGradleConfig, "nimblenet_ktx", includeMavenCentral = true).apply()
 }
 
 tasks.register("jacocoTestExternalDebugUnitTestReport", JacocoReport::class) {
@@ -109,7 +81,6 @@ tasks.register("jacocoTestExternalDebugUnitTestReport", JacocoReport::class) {
 
     executionData.setFrom(fileTree(buildDir) { include("jacoco/testExternalDebugUnitTest.exec") })
 
-    // make sure to change the path here, if the flavors change
     classDirectories.setFrom(
         fileTree("$buildDir/tmp/kotlin-classes/externalDebug") {
             exclude(
@@ -138,35 +109,35 @@ tasks.register("jacocoTestExternalDebugUnitTestReport", JacocoReport::class) {
 }
 
 dependencies {
-    implementation(UtilityLibs.kotlinxCoroutinesCore)
-    implementation(UtilityLibs.okhttp)
-    implementation(UtilityLibs.androidLibJRE)
-    implementation(UtilityLibs.workManagerRuntime)
-    implementation("com.google.android.play:feature-delivery-ktx:2.1.0")
-    implementation("com.google.protobuf:protobuf-java:3.25.2")
-    implementation("com.google.protobuf:protobuf-java-util:3.25.2")
-    implementation("androidx.work:work-testing:2.10.1")
+    implementation(Deps.Coroutines.ANDROID)
+    implementation(Deps.Network.OKHTTP)
+    implementation(Deps.Kotlin.STDLIB_JDK7)
+    implementation(Deps.AndroidX.WORK_RUNTIME_KTX)
+    implementation(Deps.Google.FEATURE_DELIVERY_KTX)
+    implementation(Deps.Google.PROTOBUF_JAVA)
+    implementation(Deps.Google.PROTOBUF_JAVA_UTIL)
+    implementation(Deps.AndroidX.WORK_TESTING)
 
     if (neGradleConfig.geminiEnabled) {
-        implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp01")
+        implementation(Deps.Google.AI_CORE)
     }
 
-    testImplementation(TestingLibs.JunitLib)
-    testImplementation(TestingLibs.MockkLib)
-    testImplementation(TestingLibs.TestCore)
-    testImplementation(TestingLibs.KotlinTest)
-    testImplementation(TestingLibs.JSONObject)
-    testImplementation(TestingLibs.RobolectricLib)
-    testImplementation(TestingLibs.CoroutineTest)
-    testImplementation("org.jetbrains.kotlin:kotlin-reflect:1.7.10")
+    testImplementation(Deps.Testing.JUNIT)
+    testImplementation(Deps.Testing.MOCKK)
+    testImplementation(Deps.AndroidX.TEST_CORE)
+    testImplementation(Deps.Kotlin.TEST)
+    testImplementation(Deps.Testing.JSON)
+    testImplementation(Deps.Testing.ROBOLECTRIC)
+    testImplementation(Deps.Coroutines.TEST)
+    testImplementation(Deps.Kotlin.REFLECT)
 
-    androidTestImplementation(TestingLibs.JunitExt)
-    androidTestImplementation(TestingLibs.CoroutineTest)
-    androidTestImplementation(TestingLibs.TestRunner)
-    androidTestImplementation(TestingLibs.TestRules)
-    androidTestImplementation(TestingLibs.MockkAndroidLib)
-    androidTestImplementation(TestingLibs.WorkManagerTesting)
-    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
+    androidTestImplementation(Deps.AndroidX.TEST_EXT_JUNIT)
+    androidTestImplementation(Deps.Coroutines.TEST)
+    androidTestImplementation(Deps.AndroidX.TEST_RUNNER)
+    androidTestImplementation(Deps.AndroidX.TEST_RULES)
+    androidTestImplementation(Deps.Testing.MOCKK_ANDROID)
+    androidTestImplementation(Deps.AndroidX.WORK_TESTING_ANDROID)
+    androidTestImplementation(Deps.AndroidX.TEST_UI_AUTOMATOR)
     androidTestImplementation(project(":nimblenet_core"))
 }
 
@@ -177,26 +148,10 @@ tasks.withType<Test> {
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> { kotlinOptions.jvmTarget = "1.8" }
 
-// Helper function for Maven publications
-fun PublishingExtension.createMavenPublication(name: String, artifactId: String) {
-    publications {
-        register<MavenPublication>(name) {
-            from(components[name])
-            groupId = "dev.deliteai"
-            this.artifactId = artifactId
-            version = neGradleConfig.releaseVersion
-        }
-    }
-}
-
 ktfmt {
-    // Enforce Kotlinlang style (4-space indent, 100-column wrap)
     kotlinLangStyle()
-
     removeUnusedImports.set(true)
     manageTrailingCommas.set(true)
-
-    // Exclude generated source sets:
     srcSetPathExclusionPattern = Regex(".*generated.*")
 }
 
@@ -206,23 +161,20 @@ tasks.register("formatKotlin") {
     dependsOn("ktfmtFormat")
 }
 
-private fun com.android.build.api.dsl.DefaultConfig.addStringConfigsFromLocalProperties(
-    keys: List<String>,
-    project: Project
-) {
-    keys.forEach { key ->
-        val value = project.getLocalProperty(key)
-        buildConfigField("String", key, "\"$value\"")
-    }
+tasks.register("publishProd") {
+    group = "publishing"
+    description = "Builds, signs, and uploads production artifacts to Maven Central"
+    dependsOn(
+        "publishExternalReleasePublicationToOssrhRepository"
+    )
 }
 
-private fun Project.getLocalProperty(key: String): String {
-    val propsFile = rootProject.file("local.properties")
-    val props = Properties()
-    if (propsFile.exists()) {
-        props.load(propsFile.inputStream())
-    }
-    return props.getProperty(key) ?: throw GradleException("Missing local property: $key")
+tasks.register("publishDev") {
+    group = "publishing"
+    description = "Builds, signs, and uploads development artifacts to S3"
+    dependsOn(
+        "publishInternalReleasePublicationToDeliteai_androidRepository",
+    )
 }
 
 // Dokka configuration for API documentation generation
