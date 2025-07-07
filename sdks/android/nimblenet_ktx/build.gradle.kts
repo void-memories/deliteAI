@@ -23,6 +23,7 @@ plugins {
     id(UtilityPlugins.kotlinParcelize)
     id("jacoco")
     id("com.ncorti.ktfmt.gradle") version "0.22.0"
+    id("org.jetbrains.dokka") version "1.9.10"
 }
 
 jacoco { toolVersion = "0.8.8" }
@@ -45,7 +46,8 @@ android {
                 "ANDROID_TEST_CLIENT_SECRET",
                 "ANDROID_TEST_HOST",
                 "REMOTE_LOGGER_KEY",
-                "REMOTE_LOGGER_URL"),
+                "REMOTE_LOGGER_URL"
+            ),
             project
         )
 
@@ -221,4 +223,46 @@ private fun Project.getLocalProperty(key: String): String {
         props.load(propsFile.inputStream())
     }
     return props.getProperty(key) ?: throw GradleException("Missing local property: $key")
+}
+
+// Dokka configuration for API documentation generation
+tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+    dokkaSourceSets {
+        named("main") {
+            displayName.set("NimbleNet Android SDK")
+
+            // Include all source directories for documentation
+            sourceRoots.from(file("src/main/kotlin"))
+
+            // Documentation and linking configuration
+            moduleName.set("NimbleNet Android SDK")
+            moduleVersion.set(neGradleConfig.releaseVersion)
+
+            // Configure API visibility
+            documentedVisibilities.set(
+                setOf(
+                    org.jetbrains.dokka.DokkaConfiguration.Visibility.PUBLIC,
+                    org.jetbrains.dokka.DokkaConfiguration.Visibility.PROTECTED
+                )
+            )
+
+            // Package documentation - exclude implementation packages
+            perPackageOption {
+                matchingRegex.set("dev\\.deliteai\\.impl.*")
+                suppress.set(true)
+            }
+        }
+    }
+}
+
+// Custom task for generating documentation
+tasks.register("generateDocs") {
+    group = "documentation"
+    description = "Generate API documentation using Dokka"
+    dependsOn("dokkaHtml")
+
+    doLast {
+        println("✅ NimbleNet SDK documentation generated successfully!")
+        println("📁 Documentation available at: ${layout.buildDirectory.get()}/dokka/html/index.html")
+    }
 }
