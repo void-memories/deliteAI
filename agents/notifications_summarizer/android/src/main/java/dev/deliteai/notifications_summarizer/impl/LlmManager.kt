@@ -10,7 +10,7 @@ import dev.deliteai.NimbleNet
 import dev.deliteai.datamodels.NimbleNetTensor
 import dev.deliteai.notifications_summarizer.dataModels.NotificationSummary
 import dev.deliteai.notifications_summarizer.impl.notification.dataModels.NotificationSnapshot
-import dev.deliteai.utils.DATATYPE
+import dev.deliteai.impl.common.DATATYPE
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
