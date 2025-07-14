@@ -134,10 +134,10 @@ keyAlias=your_key_alias
 
 #### 6. External Dependencies 
 
-Run the following command from the **ROOT of the repo** to download all the required dependencies:
+Run the following command to download all the required dependencies:
 
 ```bash
-./setup.sh --sdk android
+cd $(git rev-parse --show-toplevel) && ./setup.sh --sdk android
 ```
 ## Quick Start
 
